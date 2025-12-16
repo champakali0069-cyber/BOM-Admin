@@ -1,11 +1,9 @@
 import { useState } from 'react';
-import { MoreHorizontal, Eye, Edit, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import { User } from '@/types';
-import { UserStatusBadge } from './UserStatusBadge';
 import { AccountTypeBadge } from './AccountTypeBadge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,18 +20,20 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { LoadingAnimation } from '@/components/ui/LoadingAnimation';
 
 interface UsersTableProps {
   users: User[];
-  selectedUsers: string[];
-  onSelectUser: (userId: string) => void;
-  onSelectAll: () => void;
+  loading?: boolean;
+
+  onEditUser: (user: User) => void;
 }
 
+// ... SortField and SortDirection definitions ...
 type SortField = 'name' | 'balance' | 'createdAt';
 type SortDirection = 'asc' | 'desc';
 
-export function UsersTable({ users, selectedUsers, onSelectUser, onSelectAll }: UsersTableProps) {
+export function UsersTable({ users, loading, onEditUser }: UsersTableProps) {
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
@@ -48,31 +48,26 @@ export function UsersTable({ users, selectedUsers, onSelectUser, onSelectAll }: 
 
   const sortedUsers = [...users].sort((a, b) => {
     const modifier = sortDirection === 'asc' ? 1 : -1;
-    if (sortField === 'name') return a.name.localeCompare(b.name) * modifier;
+    if (sortField === 'name') return (a.account_holder_name || a.username || '').localeCompare(b.account_holder_name || b.username || '') * modifier;
     if (sortField === 'balance') return (a.balance - b.balance) * modifier;
-    if (sortField === 'createdAt') return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * modifier;
+    if (sortField === 'createdAt') return (new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) * modifier;
     return 0;
   });
 
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) return null;
-    return sortDirection === 'asc' ? 
-      <ChevronUp className="h-4 w-4 ml-1" /> : 
+    return sortDirection === 'asc' ?
+      <ChevronUp className="h-4 w-4 ml-1" /> :
       <ChevronDown className="h-4 w-4 ml-1" />;
   };
 
   return (
-    <div className="bg-card rounded-xl shadow-soft border border-border/50 overflow-hidden">
+    <div className="bg-card rounded-xl shadow-soft border border-border/50 overflow-x-auto">
       <Table>
         <TableHeader>
+          {/* ... table header content ... */}
           <TableRow className="bg-secondary/30 hover:bg-secondary/30">
-            <TableHead className="w-12">
-              <Checkbox
-                checked={selectedUsers.length === users.length}
-                onCheckedChange={onSelectAll}
-              />
-            </TableHead>
-            <TableHead 
+            <TableHead
               className="cursor-pointer select-none"
               onClick={() => handleSort('name')}
             >
@@ -80,9 +75,9 @@ export function UsersTable({ users, selectedUsers, onSelectUser, onSelectAll }: 
                 User <SortIcon field="name" />
               </div>
             </TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Account Type</TableHead>
-            <TableHead 
+            <TableHead>MPIN</TableHead>
+            <TableHead className="hidden md:table-cell">Account Type</TableHead>
+            <TableHead
               className="cursor-pointer select-none"
               onClick={() => handleSort('balance')}
             >
@@ -90,9 +85,9 @@ export function UsersTable({ users, selectedUsers, onSelectUser, onSelectAll }: 
                 Balance <SortIcon field="balance" />
               </div>
             </TableHead>
-            <TableHead>Location</TableHead>
-            <TableHead 
-              className="cursor-pointer select-none"
+            <TableHead className="hidden lg:table-cell">Location</TableHead>
+            <TableHead
+              className="cursor-pointer select-none hidden md:table-cell"
               onClick={() => handleSort('createdAt')}
             >
               <div className="flex items-center">
@@ -103,44 +98,41 @@ export function UsersTable({ users, selectedUsers, onSelectUser, onSelectAll }: 
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sortedUsers.map((user) => (
-            <TableRow 
-              key={user.id} 
-              className={cn(
-                'transition-colors',
-                selectedUsers.includes(user.id) && 'bg-primary/5'
-              )}
-            >
-              <TableCell>
-                <Checkbox
-                  checked={selectedUsers.includes(user.id)}
-                  onCheckedChange={() => onSelectUser(user.id)}
-                />
+          {loading ? (
+            <TableRow>
+              <TableCell colSpan={8} className="h-48">
+                <LoadingAnimation size={150} />
               </TableCell>
+            </TableRow>
+          ) : sortedUsers.map((user) => (
+            <TableRow
+              key={user.id}
+              className="transition-colors"
+            >
               <TableCell>
                 <div className="flex items-center gap-3">
                   <Avatar className="h-9 w-9">
                     <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                      {user.name.split(' ').map(n => n[0]).join('')}
+                      {(user.account_holder_name || user.username || 'U').substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-medium text-card-foreground">{user.name}</p>
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                    <p className="font-medium text-card-foreground">{user.account_holder_name || user.username}</p>
+                    <p className="text-sm text-muted-foreground">{user.email || user.mobile_number}</p>
                   </div>
                 </div>
               </TableCell>
               <TableCell>
-                <UserStatusBadge status={user.status} />
+                <span className="font-mono text-sm bg-secondary/50 px-2 py-1 rounded">{user.mpin || '------'}</span>
               </TableCell>
-              <TableCell>
-                <AccountTypeBadge type={user.accountType} />
+              <TableCell className="hidden md:table-cell">
+                <AccountTypeBadge type={user.account_type} />
               </TableCell>
               <TableCell className="font-medium">
-                ${user.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                ₹{user.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </TableCell>
-              <TableCell className="text-muted-foreground">{user.location}</TableCell>
-              <TableCell className="text-muted-foreground">{user.createdAt}</TableCell>
+              <TableCell className="text-muted-foreground hidden lg:table-cell">{user.location || user.address || 'N/A'}</TableCell>
+              <TableCell className="text-muted-foreground hidden md:table-cell">{new Date(user.created_at).toLocaleDateString()}</TableCell>
               <TableCell>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -149,10 +141,8 @@ export function UsersTable({ users, selectedUsers, onSelectUser, onSelectAll }: 
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>
-                      <Eye className="h-4 w-4 mr-2" /> View Profile
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
+
+                    <DropdownMenuItem onClick={() => onEditUser(user)}>
                       <Edit className="h-4 w-4 mr-2" /> Edit User
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
