@@ -23,6 +23,7 @@ import {
     AddTransactionInput,
     generateTransactionId,
     getCurrentTimeString,
+    getCurrentDateString,
     getDebitCreditValues,
     TransactionType,
     TransactionStatus
@@ -62,7 +63,7 @@ export async function addTransaction(input: AddTransactionInput): Promise<AddTra
 
         // Generate transaction metadata
         const transactionId = generateTransactionId();
-        const transactionDate = input.transaction_date || new Date().toISOString().split('T')[0];
+        const transactionDate = input.transaction_date || getCurrentDateString();
         const transactionTime = getCurrentTimeString();
         const status: TransactionStatus = input.status || 'success';
 

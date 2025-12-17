@@ -146,10 +146,37 @@ export function generateTransactionId(): string {
 }
 
 /**
- * Get current time string in HH:MM:SS format
+ * Get current date and time in Indian Standard Time (IST, UTC+5:30)
+ * This ensures all transactions use Indian timezone regardless of server/browser timezone
+ */
+function getIndianDateTime(): Date {
+    const now = new Date();
+    // Get UTC time and add 5 hours 30 minutes for IST
+    const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const istOffset = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
+    return new Date(utcTime + istOffset);
+}
+
+/**
+ * Get current time string in HH:MM:SS format (Indian Standard Time)
  */
 export function getCurrentTimeString(): string {
-    return new Date().toTimeString().split(' ')[0];
+    const istDate = getIndianDateTime();
+    const hours = String(istDate.getHours()).padStart(2, '0');
+    const minutes = String(istDate.getMinutes()).padStart(2, '0');
+    const seconds = String(istDate.getSeconds()).padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
+}
+
+/**
+ * Get current date string in YYYY-MM-DD format (Indian Standard Time)
+ */
+export function getCurrentDateString(): string {
+    const istDate = getIndianDateTime();
+    const year = istDate.getFullYear();
+    const month = String(istDate.getMonth() + 1).padStart(2, '0');
+    const day = String(istDate.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 /**

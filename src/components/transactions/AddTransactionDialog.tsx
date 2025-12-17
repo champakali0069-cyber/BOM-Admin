@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { addTransaction, TransactionType } from '@/services';
+import { addTransaction, TransactionType, getCurrentDateString } from '@/services';
 
 interface AddTransactionDialogProps {
     open: boolean;
@@ -40,7 +40,7 @@ export function AddTransactionDialog({ open, onOpenChange, onTransactionAdded, d
         try {
             const result = await addTransaction({
                 user_id: data.user_id,
-                transaction_date: data.transaction_date || new Date().toISOString().split('T')[0],
+                transaction_date: data.transaction_date || getCurrentDateString(),
                 transaction_type: data.transaction_type as TransactionType,
                 amount: parseFloat(data.amount),
                 narration: data.narration,
@@ -81,7 +81,7 @@ export function AddTransactionDialog({ open, onOpenChange, onTransactionAdded, d
                         <Input
                             type="date"
                             {...register('transaction_date')}
-                            defaultValue={new Date().toISOString().split('T')[0]}
+                            defaultValue={getCurrentDateString()}
                         />
                     </div>
 

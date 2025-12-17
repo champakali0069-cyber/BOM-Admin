@@ -55,6 +55,7 @@ export {
     getDebitCreditValues,
     generateTransactionId,
     getCurrentTimeString,
+    getCurrentDateString,
     getUserInitialBalance,
     CREDIT_TYPES,
     DEBIT_TYPES,
