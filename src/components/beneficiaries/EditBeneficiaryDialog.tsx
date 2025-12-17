@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,6 +12,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Beneficiary } from '@/types';
@@ -24,8 +31,9 @@ interface EditBeneficiaryDialogProps {
 }
 
 export function EditBeneficiaryDialog({ beneficiary, open, onOpenChange, onBeneficiaryUpdated }: EditBeneficiaryDialogProps) {
-    const { register, handleSubmit, setValue, watch } = useForm();
+    const { register, handleSubmit, setValue, watch, formState: { isSubmitting } } = useForm();
     const isActive = watch('is_active');
+    const [beneficiaryType, setBeneficiaryType] = useState<string>('within_bank');
 
     useEffect(() => {
         if (beneficiary) {
@@ -35,6 +43,7 @@ export function EditBeneficiaryDialog({ beneficiary, open, onOpenChange, onBenef
             setValue('bank_name', beneficiary.bank_name);
             setValue('nickname', beneficiary.nickname);
             setValue('is_active', beneficiary.is_active);
+            setBeneficiaryType(beneficiary.is_within_bank ? 'within_bank' : 'other_bank');
         }
     }, [beneficiary, setValue]);
 
@@ -49,6 +58,7 @@ export function EditBeneficiaryDialog({ beneficiary, open, onOpenChange, onBenef
                     ifsc_code: data.ifsc_code,
                     bank_name: data.bank_name,
                     nickname: data.nickname,
+                    is_within_bank: beneficiaryType === 'within_bank',
                     is_active: data.is_active
                 })
                 .eq('id', beneficiary.id);
@@ -71,6 +81,19 @@ export function EditBeneficiaryDialog({ beneficiary, open, onOpenChange, onBenef
                     <DialogTitle>Edit Beneficiary</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                        <Label>Beneficiary Type <span className="text-destructive">*</span></Label>
+                        <Select value={beneficiaryType} onValueChange={setBeneficiaryType}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select beneficiary type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="within_bank">Within Bank</SelectItem>
+                                <SelectItem value="other_bank">Other Bank</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
                     <div className="grid gap-2">
                         <Label>Beneficiary Name</Label>
                         <Input {...register('beneficiary_name')} />
@@ -107,7 +130,9 @@ export function EditBeneficiaryDialog({ beneficiary, open, onOpenChange, onBenef
                     </div>
 
                     <DialogFooter>
-                        <Button type="submit">Save Changes</Button>
+                        <Button type="submit" disabled={isSubmitting}>
+                            {isSubmitting ? 'Saving...' : 'Save Changes'}
+                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>

@@ -12,9 +12,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Transaction } from '@/types';
+import { editTransaction, TransactionType } from '@/services';
 
 interface EditTransactionDialogProps {
     transaction: Transaction | null;
@@ -24,13 +24,13 @@ interface EditTransactionDialogProps {
 }
 
 export function EditTransactionDialog({ transaction, open, onOpenChange, onTransactionUpdated }: EditTransactionDialogProps) {
-    const { register, handleSubmit, setValue } = useForm();
+    const { register, handleSubmit, setValue, formState: { isSubmitting } } = useForm();
 
     useEffect(() => {
         if (transaction) {
             setValue('amount', transaction.amount);
             setValue('description', transaction.description);
-            setValue('status', transaction.status);
+            setValue('narration', transaction.narration);
             setValue('beneficiary_name', transaction.beneficiary_name);
             setValue('transaction_type', transaction.transaction_type);
         }
@@ -39,18 +39,17 @@ export function EditTransactionDialog({ transaction, open, onOpenChange, onTrans
     const onSubmit = async (data: any) => {
         if (!transaction) return;
         try {
-            const { error } = await supabase
-                .from('user_transactions')
-                .update({
-                    amount: parseFloat(data.amount),
-                    description: data.description,
-                    status: data.status,
-                    beneficiary_name: data.beneficiary_name,
-                    transaction_type: data.transaction_type
-                })
-                .eq('id', transaction.id);
+            const result = await editTransaction(transaction.id, {
+                amount: parseFloat(data.amount),
+                description: data.description,
+                narration: data.narration,
+                beneficiary_name: data.beneficiary_name,
+                transaction_type: data.transaction_type as TransactionType
+            });
 
-            if (error) throw error;
+            if (!result.success) {
+                throw new Error(result.error);
+            }
 
             toast.success('Transaction updated successfully');
             onOpenChange(false);
@@ -90,31 +89,26 @@ export function EditTransactionDialog({ transaction, open, onOpenChange, onTrans
                     </div>
 
                     <div className="grid gap-2">
-                        <Label>Description</Label>
+                        <Label>Narration <span className="text-destructive">*</span></Label>
+                        <Input {...register('narration', { required: true })} />
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label>Description (Optional)</Label>
                         <Input {...register('description')} />
                     </div>
 
                     <div className="grid gap-2">
-                        <Label>Beneficiary Name</Label>
+                        <Label>Beneficiary Name (Optional)</Label>
                         <Input {...register('beneficiary_name')} />
                     </div>
 
-                    <div className="grid gap-2">
-                        <Label>Status</Label>
-                        <Select onValueChange={(v) => setValue('status', v)} defaultValue={transaction?.status}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="success">Success</SelectItem>
-                                <SelectItem value="pending">Pending</SelectItem>
-                                <SelectItem value="failed">Failed</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
+
 
                     <DialogFooter>
-                        <Button type="submit">Save Changes</Button>
+                        <Button type="submit" disabled={isSubmitting}>
+                            {isSubmitting ? 'Saving...' : 'Save Changes'}
+                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>

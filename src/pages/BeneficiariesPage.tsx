@@ -38,6 +38,7 @@ export default function BeneficiariesPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [editBeneficiary, setEditBeneficiary] = useState<Beneficiary | null>(null);
+    const [deletingBenId, setDeletingBenId] = useState<string | null>(null);
 
     useEffect(() => {
         if (selectedUserId) {
@@ -67,7 +68,7 @@ export default function BeneficiariesPage() {
     };
 
     const handleDelete = async (data: Beneficiary) => {
-        if (!confirm('Are you sure you want to delete this beneficiary?')) return;
+        setDeletingBenId(data.id);
         try {
             const { error } = await supabase
                 .from('user_beneficiaries')
@@ -80,6 +81,8 @@ export default function BeneficiariesPage() {
         } catch (error) {
             console.error('Error deleting:', error);
             toast.error('Failed to delete beneficiary');
+        } finally {
+            setDeletingBenId(null);
         }
     };
 
@@ -177,8 +180,13 @@ export default function BeneficiariesPage() {
                                                                 <Edit className="h-4 w-4 mr-2" /> Edit Beneficiary
                                                             </DropdownMenuItem>
                                                             <DropdownMenuSeparator />
-                                                            <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(ben)}>
-                                                                <Trash2 className="h-4 w-4 mr-2" /> Delete
+                                                            <DropdownMenuItem
+                                                                className="text-destructive"
+                                                                onClick={() => handleDelete(ben)}
+                                                                disabled={deletingBenId === ben.id}
+                                                            >
+                                                                <Trash2 className="h-4 w-4 mr-2" />
+                                                                {deletingBenId === ben.id ? 'Deleting...' : 'Delete'}
                                                             </DropdownMenuItem>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>

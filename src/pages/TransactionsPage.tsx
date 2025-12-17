@@ -41,6 +41,7 @@ export default function TransactionsPage() {
 
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [editTransaction, setEditTransaction] = useState<Transaction | null>(null);
+    const [deletingTxId, setDeletingTxId] = useState<string | null>(null);
 
     useEffect(() => {
         if (selectedUserId) {
@@ -57,7 +58,8 @@ export default function TransactionsPage() {
                 .from('user_transactions')
                 .select('*')
                 .eq('user_id', selectedUserId)
-                .order('created_at', { ascending: false });
+                .order('transaction_date', { ascending: false })
+                .order('transaction_time', { ascending: false });
 
             if (error) throw error;
             setTransactions(data as any);
@@ -70,26 +72,29 @@ export default function TransactionsPage() {
     };
 
     const handleDelete = async (data: Transaction) => {
-        if (!confirm('Are you sure you want to delete this transaction?')) return;
+        setDeletingTxId(data.id);
         try {
-            const { error } = await supabase
-                .from('user_transactions')
-                .delete()
-                .eq('id', data.id);
+            const { deleteTransaction } = await import('@/services');
+            const result = await deleteTransaction(data.id);
 
-            if (error) throw error;
+            if (!result.success) {
+                throw new Error(result.error);
+            }
+
             toast.success('Transaction deleted');
             fetchTransactions();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error deleting:', error);
             toast.error('Failed to delete transaction');
+        } finally {
+            setDeletingTxId(null);
         }
     };
 
     const filteredTransactions = useMemo(() => {
         return transactions.filter(tx => {
             const matchesSearch =
-                (tx.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (tx.narration || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                 (tx.transaction_id || '').toLowerCase().includes(searchQuery.toLowerCase());
 
             const matchesType = typeFilter === 'all' || tx.transaction_type === typeFilter;
@@ -152,36 +157,32 @@ export default function TransactionsPage() {
                                     <TableRow>
                                         <TableHead>Date</TableHead>
                                         <TableHead>Type</TableHead>
-                                        <TableHead>Description</TableHead>
+                                        <TableHead>Narration</TableHead>
                                         <TableHead>Amount</TableHead>
-                                        <TableHead>Status</TableHead>
                                         <TableHead className="w-12"></TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {loading ? (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="h-48">
+                                            <TableCell colSpan={5} className="h-48">
                                                 <LoadingAnimation size={150} />
                                             </TableCell>
                                         </TableRow>
                                     ) : paginatedTransactions.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="text-center py-8">No transactions found.</TableCell>
+                                            <TableCell colSpan={5} className="text-center py-8">No transactions found.</TableCell>
                                         </TableRow>
                                     ) : (
                                         paginatedTransactions.map((tx) => (
                                             <TableRow key={tx.id}>
-                                                <TableCell>{new Date(tx.created_at || tx.transaction_date).toLocaleDateString()}</TableCell>
+                                                <TableCell>{new Date(tx.transaction_date).toLocaleDateString()}</TableCell>
                                                 <TableCell>
                                                     <Badge variant="outline">{tx.transaction_type}</Badge>
                                                 </TableCell>
-                                                <TableCell>{tx.description}</TableCell>
-                                                <TableCell className={tx.transaction_type === 'CREDIT' ? 'text-green-600' : 'text-red-600'}>
-                                                    {tx.transaction_type === 'CREDIT' ? '+' : '-'}₹{tx.amount}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Badge variant={tx.status === 'success' ? 'default' : 'secondary'}>{tx.status}</Badge>
+                                                <TableCell>{tx.narration}</TableCell>
+                                                <TableCell className={tx.transaction_type === 'CREDIT' || tx.transaction_type === 'TRANSFER_IN' ? 'text-green-600' : 'text-red-600'}>
+                                                    {tx.transaction_type === 'CREDIT' || tx.transaction_type === 'TRANSFER_IN' ? '+' : '-'}₹{tx.amount}
                                                 </TableCell>
                                                 <TableCell>
                                                     <DropdownMenu>
@@ -195,8 +196,13 @@ export default function TransactionsPage() {
                                                                 <Edit className="h-4 w-4 mr-2" /> Edit Transaction
                                                             </DropdownMenuItem>
                                                             <DropdownMenuSeparator />
-                                                            <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(tx)}>
-                                                                <Trash2 className="h-4 w-4 mr-2" /> Delete
+                                                            <DropdownMenuItem
+                                                                className="text-destructive"
+                                                                onClick={() => handleDelete(tx)}
+                                                                disabled={deletingTxId === tx.id}
+                                                            >
+                                                                <Trash2 className="h-4 w-4 mr-2" />
+                                                                {deletingTxId === tx.id ? 'Deleting...' : 'Delete'}
                                                             </DropdownMenuItem>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>

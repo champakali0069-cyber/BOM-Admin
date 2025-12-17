@@ -36,14 +36,18 @@ export interface Transaction {
   id: string;
   user_id: string;
   transaction_id: string;
-  transaction_type: 'DEBIT' | 'CREDIT' | 'TRANSFER';
+  transaction_type: 'DEBIT' | 'CREDIT' | 'TRANSFER_OUT' | 'TRANSFER_IN' | 'ATM_WITHDRAWAL' | 'DEPOSIT' | 'UTILITY_PAYMENT' | 'UPI_TRANSFER' | 'CHEQUE_DEPOSIT' | 'CHEQUE_WITHDRAWAL';
   amount: number;
   status: 'success' | 'pending' | 'failed' | 'reversed';
   description: string;
+  narration?: string;
   transaction_date: string;
+  transaction_time?: string;
   beneficiary_name?: string;
   balance_after?: number;
-  created_at?: string; // Optional or required, usually required from DB
+  debit?: number | null;
+  credit?: number | null;
+  created_at?: string;
 }
 
 export interface Beneficiary {
@@ -55,6 +59,7 @@ export interface Beneficiary {
   ifsc_code: string;
   bank_name: string;
   nickname?: string;
+  is_within_bank: boolean;
   is_active: boolean;
   created_at?: string;
 }

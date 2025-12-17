@@ -101,40 +101,79 @@ export type Database = {
           id: string
           user_id: string
           transaction_id: string
-          transaction_type: 'DEBIT' | 'CREDIT' | 'TRANSFER'
-          amount: number
-          status: 'success' | 'pending' | 'failed' | 'reversed'
-          description: string
           transaction_date: string
+          transaction_time: string
+          transaction_type: 'DEBIT' | 'CREDIT' | 'TRANSFER_OUT' | 'TRANSFER_IN' | 'ATM_WITHDRAWAL' | 'DEPOSIT' | 'UTILITY_PAYMENT' | 'UPI_TRANSFER' | 'CHEQUE_DEPOSIT' | 'CHEQUE_WITHDRAWAL'
+          description: string
           beneficiary_name: string | null
-          balance_after: number | null
+          beneficiary_account_number: string | null
+          beneficiary_ifsc: string | null
+          beneficiary_bank_name: string | null
+          beneficiary_bank_code: string | null
+          amount: number
+          debit: number | null
+          credit: number | null
+          balance_after: number
+          remarks: string | null
+          reference_number: string | null
+          narration: string | null
+          status: 'success' | 'pending' | 'failed' | 'reversed'
+          category: string | null
+          is_within_bank: boolean
           created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
           user_id: string
           transaction_id: string
-          transaction_type: 'DEBIT' | 'CREDIT' | 'TRANSFER'
-          amount: number
-          status?: 'success' | 'pending' | 'failed' | 'reversed'
-          description: string
           transaction_date?: string
+          transaction_time?: string
+          transaction_type: 'DEBIT' | 'CREDIT' | 'TRANSFER_OUT' | 'TRANSFER_IN' | 'ATM_WITHDRAWAL' | 'DEPOSIT' | 'UTILITY_PAYMENT' | 'UPI_TRANSFER' | 'CHEQUE_DEPOSIT' | 'CHEQUE_WITHDRAWAL'
+          description?: string
           beneficiary_name?: string | null
-          balance_after?: number | null
+          beneficiary_account_number?: string | null
+          beneficiary_ifsc?: string | null
+          beneficiary_bank_name?: string | null
+          beneficiary_bank_code?: string | null
+          amount: number
+          debit?: number | null
+          credit?: number | null
+          balance_after?: number
+          remarks?: string | null
+          reference_number?: string | null
+          narration?: string | null
+          status?: 'success' | 'pending' | 'failed' | 'reversed'
+          category?: string | null
+          is_within_bank?: boolean
           created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
           user_id?: string
           transaction_id?: string
-          transaction_type?: 'DEBIT' | 'CREDIT' | 'TRANSFER'
-          amount?: number
-          status?: 'success' | 'pending' | 'failed' | 'reversed'
-          description?: string
           transaction_date?: string
+          transaction_time?: string
+          transaction_type?: 'DEBIT' | 'CREDIT' | 'TRANSFER_OUT' | 'TRANSFER_IN' | 'ATM_WITHDRAWAL' | 'DEPOSIT' | 'UTILITY_PAYMENT' | 'UPI_TRANSFER' | 'CHEQUE_DEPOSIT' | 'CHEQUE_WITHDRAWAL'
+          description?: string
           beneficiary_name?: string | null
-          balance_after?: number | null
+          beneficiary_account_number?: string | null
+          beneficiary_ifsc?: string | null
+          beneficiary_bank_name?: string | null
+          beneficiary_bank_code?: string | null
+          amount?: number
+          debit?: number | null
+          credit?: number | null
+          balance_after?: number
+          remarks?: string | null
+          reference_number?: string | null
+          narration?: string | null
+          status?: 'success' | 'pending' | 'failed' | 'reversed'
+          category?: string | null
+          is_within_bank?: boolean
           created_at?: string
+          updated_at?: string
         }
         Relationships: [
           {

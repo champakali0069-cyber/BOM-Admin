@@ -1,4 +1,5 @@
 
+
 import { useState, useMemo } from 'react';
 import { useUsers } from '@/hooks/useUsers';
 import { UsersTable } from '@/components/users/UsersTable';
@@ -10,6 +11,8 @@ import { AddUserDialog } from '@/components/users/AddUserDialog';
 
 import { EditUserDialog } from '@/components/users/EditUserDialog';
 import { User } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -24,6 +27,7 @@ export default function UsersPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
   const [selectedUserForEdit, setSelectedUserForEdit] = useState<User | null>(null);
 
@@ -48,6 +52,35 @@ export default function UsersPage() {
 
   const handleEditUser = (user: User) => {
     setSelectedUserForEdit(user);
+  };
+
+  const handleDeleteUser = async (user: User) => {
+    setDeletingUserId(user.id);
+    try {
+      // Delete user_details first (foreign key constraint)
+      const { error: detailsError } = await supabase
+        .from('user_details')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (detailsError) throw detailsError;
+
+      // Delete user
+      const { error: userError } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', user.id);
+
+      if (userError) throw userError;
+
+      toast.success('User deleted successfully');
+      refetch();
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
+      toast.error('Failed to delete user: ' + error.message);
+    } finally {
+      setDeletingUserId(null);
+    }
   };
 
   return (
@@ -80,6 +113,8 @@ export default function UsersPage() {
           users={paginatedUsers}
           loading={loading}
           onEditUser={handleEditUser}
+          onDeleteUser={handleDeleteUser}
+          deletingUserId={deletingUserId}
         />
 
         {/* Pagination */}

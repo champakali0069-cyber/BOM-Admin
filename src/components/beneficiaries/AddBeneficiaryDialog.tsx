@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,6 +11,13 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -22,7 +29,8 @@ interface AddBeneficiaryDialogProps {
 }
 
 export function AddBeneficiaryDialog({ open, onOpenChange, onBeneficiaryAdded, defaultUserId }: AddBeneficiaryDialogProps) {
-    const { register, handleSubmit, reset, setValue } = useForm();
+    const { register, handleSubmit, reset, setValue, formState: { isSubmitting, isValid } } = useForm({ mode: 'onChange' });
+    const [beneficiaryType, setBeneficiaryType] = useState<string>('within_bank');
 
     useEffect(() => {
         if (open && defaultUserId) {
@@ -44,6 +52,7 @@ export function AddBeneficiaryDialog({ open, onOpenChange, onBeneficiaryAdded, d
                     ifsc_code: data.ifsc_code,
                     bank_name: data.bank_name,
                     nickname: data.nickname,
+                    is_within_bank: beneficiaryType === 'within_bank',
                     is_active: true
                 });
 
@@ -51,6 +60,7 @@ export function AddBeneficiaryDialog({ open, onOpenChange, onBeneficiaryAdded, d
 
             toast.success('Beneficiary added successfully');
             reset();
+            setBeneficiaryType('within_bank');
             onOpenChange(false);
             onBeneficiaryAdded();
         } catch (error: any) {
@@ -66,35 +76,43 @@ export function AddBeneficiaryDialog({ open, onOpenChange, onBeneficiaryAdded, d
                     <DialogTitle>Add Beneficiary</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
+                    <input
+                        type="hidden"
+                        {...register('user_id', { required: true })}
+                        value={defaultUserId}
+                    />
+
                     <div className="grid gap-2">
-                        <Label>User ID (UUID)</Label>
-                        <Input
-                            {...register('user_id', { required: true })}
-                            placeholder="e.g. 550e84..."
-                            defaultValue={defaultUserId}
-                            readOnly={!!defaultUserId}
-                            className={defaultUserId ? "bg-muted" : ""}
-                        />
+                        <Label>Beneficiary Type <span className="text-destructive">*</span></Label>
+                        <Select value={beneficiaryType} onValueChange={setBeneficiaryType}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select beneficiary type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="within_bank">Within Bank</SelectItem>
+                                <SelectItem value="other_bank">Other Bank</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     <div className="grid gap-2">
-                        <Label>Beneficiary Name</Label>
+                        <Label>Beneficiary Name <span className="text-destructive">*</span></Label>
                         <Input {...register('beneficiary_name', { required: true })} />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
-                            <Label>Account Number</Label>
+                            <Label>Account Number <span className="text-destructive">*</span></Label>
                             <Input {...register('account_number', { required: true })} />
                         </div>
                         <div className="grid gap-2">
-                            <Label>IFSC Code</Label>
+                            <Label>IFSC Code <span className="text-destructive">*</span></Label>
                             <Input {...register('ifsc_code', { required: true })} />
                         </div>
                     </div>
 
                     <div className="grid gap-2">
-                        <Label>Bank Name</Label>
+                        <Label>Bank Name <span className="text-destructive">*</span></Label>
                         <Input {...register('bank_name', { required: true })} />
                     </div>
 
@@ -104,7 +122,9 @@ export function AddBeneficiaryDialog({ open, onOpenChange, onBeneficiaryAdded, d
                     </div>
 
                     <DialogFooter>
-                        <Button type="submit">Add Beneficiary</Button>
+                        <Button type="submit" disabled={!isValid || isSubmitting}>
+                            {isSubmitting ? 'Adding...' : 'Add Beneficiary'}
+                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>

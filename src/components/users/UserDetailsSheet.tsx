@@ -34,7 +34,8 @@ export function UserDetailsSheet({ user, open, onOpenChange }: UserDetailsSheetP
                 .from('user_transactions')
                 .select('*')
                 .eq('user_id', user.id)
-                .order('created_at', { ascending: false });
+                .order('transaction_date', { ascending: false })
+                .order('transaction_time', { ascending: false });
 
             if (txData) setTransactions(txData as any);
 
@@ -133,7 +134,7 @@ export function UserDetailsSheet({ user, open, onOpenChange }: UserDetailsSheetP
                                             <div key={tx.id} className="flex justify-between items-center border-b pb-2 last:border-0">
                                                 <div>
                                                     <p className="font-medium text-sm">{tx.description || tx.transaction_type}</p>
-                                                    <p className="text-xs text-muted-foreground">{new Date(tx.created_at).toLocaleDateString()}</p>
+                                                    <p className="text-xs text-muted-foreground">{new Date(tx.transaction_date).toLocaleDateString()}</p>
                                                 </div>
                                                 <div className={`font-semibold text-sm ${tx.transaction_type === 'CREDIT' ? 'text-green-600' : 'text-red-600'}`}>
                                                     {tx.transaction_type === 'CREDIT' ? '+' : '-'}${tx.amount.toFixed(2)}

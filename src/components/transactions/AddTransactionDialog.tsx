@@ -12,8 +12,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { addTransaction, TransactionType } from '@/services';
 
 interface AddTransactionDialogProps {
     open: boolean;
@@ -23,37 +23,35 @@ interface AddTransactionDialogProps {
 }
 
 export function AddTransactionDialog({ open, onOpenChange, onTransactionAdded, defaultUserId }: AddTransactionDialogProps) {
-    const { register, handleSubmit, reset, setValue } = useForm();
+    const { register, handleSubmit, reset, setValue, watch, formState: { isSubmitting, isValid } } = useForm({ mode: 'onChange' });
+    const transactionType = watch('transaction_type');
 
     useEffect(() => {
         if (open && defaultUserId) {
             setValue('user_id', defaultUserId);
         }
+        if (open) {
+            // Set default values for select fields
+            setValue('transaction_type', 'DEBIT');
+        }
     }, [open, defaultUserId, setValue]);
 
     const onSubmit = async (data: any) => {
         try {
-            const txnId = `TXN_${Date.now()}`;
-            const now = new Date();
-            const dateStr = now.toISOString().split('T')[0];
-            const timeStr = now.toTimeString().split(' ')[0];
+            const result = await addTransaction({
+                user_id: data.user_id,
+                transaction_date: data.transaction_date || new Date().toISOString().split('T')[0],
+                transaction_type: data.transaction_type as TransactionType,
+                amount: parseFloat(data.amount),
+                narration: data.narration,
+                description: data.description,
+                beneficiary_name: data.beneficiary_name,
+                status: 'success'
+            });
 
-            const { error } = await supabase
-                .from('user_transactions')
-                .insert({
-                    user_id: data.user_id,
-                    transaction_id: txnId,
-                    transaction_date: dateStr,
-                    transaction_time: timeStr,
-                    transaction_type: data.transaction_type,
-                    amount: parseFloat(data.amount),
-                    description: data.description,
-                    status: data.status,
-                    balance_after: 0,
-                    beneficiary_name: data.beneficiary_name
-                });
-
-            if (error) throw error;
+            if (!result.success) {
+                throw new Error(result.error);
+            }
 
             toast.success('Transaction added successfully');
             reset();
@@ -72,21 +70,25 @@ export function AddTransactionDialog({ open, onOpenChange, onTransactionAdded, d
                     <DialogTitle>Add Transaction</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
+                    <input
+                        type="hidden"
+                        {...register('user_id', { required: true })}
+                        value={defaultUserId}
+                    />
+
                     <div className="grid gap-2">
-                        <Label>User ID (UUID)</Label>
+                        <Label>Transaction Date</Label>
                         <Input
-                            {...register('user_id', { required: true })}
-                            placeholder="e.g. 550e8400-e29b..."
-                            defaultValue={defaultUserId}
-                            readOnly={!!defaultUserId}
-                            className={defaultUserId ? "bg-muted" : ""}
+                            type="date"
+                            {...register('transaction_date')}
+                            defaultValue={new Date().toISOString().split('T')[0]}
                         />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
-                            <Label>Type</Label>
-                            <Select onValueChange={(v) => setValue('transaction_type', v)} defaultValue="DEBIT">
+                            <Label>Type <span className="text-destructive">*</span></Label>
+                            <Select value={transactionType} onValueChange={(v) => setValue('transaction_type', v, { shouldValidate: true })}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Type" />
                                 </SelectTrigger>
@@ -99,14 +101,19 @@ export function AddTransactionDialog({ open, onOpenChange, onTransactionAdded, d
                             </Select>
                         </div>
                         <div className="grid gap-2">
-                            <Label>Amount</Label>
+                            <Label>Amount <span className="text-destructive">*</span></Label>
                             <Input type="number" step="0.01" {...register('amount', { required: true })} />
                         </div>
                     </div>
 
                     <div className="grid gap-2">
-                        <Label>Description</Label>
-                        <Input {...register('description', { required: true })} />
+                        <Label>Narration <span className="text-destructive">*</span></Label>
+                        <Input {...register('narration', { required: true })} />
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label>Description (Optional)</Label>
+                        <Input {...register('description')} />
                     </div>
 
                     <div className="grid gap-2">
@@ -114,22 +121,12 @@ export function AddTransactionDialog({ open, onOpenChange, onTransactionAdded, d
                         <Input {...register('beneficiary_name')} />
                     </div>
 
-                    <div className="grid gap-2">
-                        <Label>Status</Label>
-                        <Select onValueChange={(v) => setValue('status', v)} defaultValue="success">
-                            <SelectTrigger>
-                                <SelectValue placeholder="Status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="success">Success</SelectItem>
-                                <SelectItem value="pending">Pending</SelectItem>
-                                <SelectItem value="failed">Failed</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
+
 
                     <DialogFooter>
-                        <Button type="submit">Add Transaction</Button>
+                        <Button type="submit" disabled={!isValid || isSubmitting}>
+                            {isSubmitting ? 'Adding...' : 'Add Transaction'}
+                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>

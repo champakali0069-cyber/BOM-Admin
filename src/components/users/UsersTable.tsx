@@ -27,13 +27,15 @@ interface UsersTableProps {
   loading?: boolean;
 
   onEditUser: (user: User) => void;
+  onDeleteUser: (user: User) => void;
+  deletingUserId?: string | null;
 }
 
 // ... SortField and SortDirection definitions ...
 type SortField = 'name' | 'balance' | 'createdAt';
 type SortDirection = 'asc' | 'desc';
 
-export function UsersTable({ users, loading, onEditUser }: UsersTableProps) {
+export function UsersTable({ users, loading, onEditUser, onDeleteUser, deletingUserId }: UsersTableProps) {
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
@@ -146,8 +148,13 @@ export function UsersTable({ users, loading, onEditUser }: UsersTableProps) {
                       <Edit className="h-4 w-4 mr-2" /> Edit User
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive">
-                      <Trash2 className="h-4 w-4 mr-2" /> Delete User
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={() => onDeleteUser(user)}
+                      disabled={deletingUserId === user.id}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      {deletingUserId === user.id ? 'Deleting...' : 'Delete User'}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

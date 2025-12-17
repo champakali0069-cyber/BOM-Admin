@@ -31,7 +31,7 @@ interface AddUserDialogProps {
 }
 
 export function AddUserDialog({ open, onOpenChange, onUserAdded, children }: AddUserDialogProps) {
-    const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm();
+    const { register, handleSubmit, reset, formState: { errors, isSubmitting, isValid } } = useForm({ mode: 'onChange' });
 
     const onSubmit = async (data: any) => {
         try {
@@ -60,7 +60,16 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded, children }: Add
                     customer_id: `CUST_${Date.now()}`, // Simple generic ID generation
                     email: data.email,
                     mobile_number: data.mobile_number,
-                    address: data.address
+                    address: data.address,
+                    ifsc_code: data.ifsc_code,
+                    branch_name: data.branch_name,
+                    mode_of_operation: data.mode_of_operation,
+                    mmid: data.mmid,
+                    uncleared_balance: parseFloat(data.uncleared_balance || '0'),
+                    amount_on_hold: parseFloat(data.amount_on_hold || '0'),
+                    monthly_average_balance: parseFloat(data.monthly_average_balance || '0'),
+                    nominee_name: data.nominee_name,
+                    account_open_date: data.account_open_date
                 });
 
             if (detailsError) {
@@ -84,7 +93,7 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded, children }: Add
             <DialogTrigger asChild>
                 {children}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] overflow-y-auto max-h-[90vh]">
+            <DialogContent className="sm:max-w-[500px] overflow-y-auto max-h-[90vh]">
                 <DialogHeader>
                     <DialogTitle>Add New User</DialogTitle>
                     <DialogDescription>
@@ -94,19 +103,19 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded, children }: Add
                 <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="username">Username</Label>
+                            <Label htmlFor="username">Username <span className="text-destructive">*</span></Label>
                             <Input id="username" {...register('username', { required: true })} />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="account_number">Account Number</Label>
+                            <Label htmlFor="account_number">Account Number <span className="text-destructive">*</span></Label>
                             <Input id="account_number" {...register('account_number', { required: true })} />
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="mpin">MPIN</Label>
-                            <Input id="mpin" type="password" maxLength={6} {...register('mpin', { required: true })} />
+                            <Label htmlFor="mpin">MPIN <span className="text-destructive">*</span></Label>
+                            <Input id="mpin" type="password" maxLength={4} {...register('mpin', { required: true, minLength: 4, maxLength: 4 })} placeholder="4-digit MPIN" />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="status">Status</Label>
@@ -126,7 +135,7 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded, children }: Add
                     </div>
 
                     <div className="grid gap-2">
-                        <Label htmlFor="account_holder_name">Full Name</Label>
+                        <Label htmlFor="account_holder_name">Full Name <span className="text-destructive">*</span></Label>
                         <Input id="account_holder_name" {...register('account_holder_name', { required: true })} />
                     </div>
 
@@ -145,7 +154,7 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded, children }: Add
                             <input type="hidden" {...register('account_type')} defaultValue="SAVINGS" />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="balance">Initial Balance</Label>
+                            <Label htmlFor="balance">Balance <span className="text-destructive">*</span></Label>
                             <Input id="balance" type="number" step="0.01" {...register('balance', { required: true })} />
                         </div>
                     </div>
@@ -166,8 +175,56 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded, children }: Add
                         <Input id="address" {...register('address')} />
                     </div>
 
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="ifsc_code">IFSC Code</Label>
+                            <Input id="ifsc_code" {...register('ifsc_code')} />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="branch_name">Branch Name</Label>
+                            <Input id="branch_name" {...register('branch_name')} />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="mode_of_operation">Mode of Operation</Label>
+                            <Input id="mode_of_operation" {...register('mode_of_operation')} />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="mmid">MMID</Label>
+                            <Input id="mmid" {...register('mmid')} />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="uncleared_balance">Uncleared Bal</Label>
+                            <Input id="uncleared_balance" type="number" step="0.01" {...register('uncleared_balance')} defaultValue="0" />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="amount_on_hold">Hold Amount</Label>
+                            <Input id="amount_on_hold" type="number" step="0.01" {...register('amount_on_hold')} defaultValue="0" />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="monthly_average_balance">MAB</Label>
+                            <Input id="monthly_average_balance" type="number" step="0.01" {...register('monthly_average_balance')} defaultValue="0" />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="nominee_name">Nominee Name</Label>
+                            <Input id="nominee_name" {...register('nominee_name')} />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="account_open_date">Account Open Date <span className="text-destructive">*</span></Label>
+                            <Input id="account_open_date" type="date" {...register('account_open_date', { required: true })} />
+                        </div>
+                    </div>
+
                     <DialogFooter>
-                        <Button type="submit" disabled={isSubmitting}>
+                        <Button type="submit" disabled={!isValid || isSubmitting}>
                             {isSubmitting ? 'Saving...' : 'Create User'}
                         </Button>
                     </DialogFooter>

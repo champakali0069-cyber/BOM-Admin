@@ -24,7 +24,7 @@ interface EditUserDialogProps {
 }
 
 export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: EditUserDialogProps) {
-    const { register, handleSubmit, reset, setValue } = useForm();
+    const { register, handleSubmit, reset, setValue, formState: { isSubmitting } } = useForm();
 
     useEffect(() => {
         if (user) {
@@ -116,9 +116,9 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
                         <div className="grid gap-2">
                             <Label>MPIN</Label>
                             <Input
-                                {...register('mpin')}
-                                maxLength={6}
-                                placeholder="6-digit MPIN"
+                                {...register('mpin', { minLength: 4, maxLength: 4 })}
+                                maxLength={4}
+                                placeholder="4-digit MPIN"
                                 className="font-mono"
                             />
                         </div>
@@ -226,7 +226,9 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
                     </div>
 
                     <DialogFooter>
-                        <Button type="submit">Save Changes</Button>
+                        <Button type="submit" disabled={isSubmitting}>
+                            {isSubmitting ? 'Saving...' : 'Save Changes'}
+                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>
