@@ -95,7 +95,7 @@ export async function addTransaction(input: AddTransactionInput): Promise<AddTra
                 balance_after: balanceAfter,
                 status: status,
                 narration: input.narration,
-                description: input.description || input.narration, // Default description to narration
+                description: input.description || '', // Keep description empty if not provided
                 beneficiary_name: input.beneficiary_name,
                 category: input.category,
                 remarks: input.remarks
