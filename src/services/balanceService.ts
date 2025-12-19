@@ -22,8 +22,10 @@ import {
     Transaction,
     TransactionType,
     TransactionStatus,
+    OperationType,
     BalanceCalculationResult,
     calculateImpact,
+    calculateImpactLegacy,
     getUserInitialBalance,
     shouldImpactBalance
 } from './transactionTypes';
@@ -126,7 +128,8 @@ export async function recalculateAllBalances(userId: string): Promise<BalanceCal
     // Recalculate balance for each transaction
     for (const txn of transactions) {
         // Only apply impact if status is 'success'
-        const impact = calculateImpact(
+        // Use legacy calculation for backwards compatibility
+        const impact = calculateImpactLegacy(
             txn.amount,
             txn.transaction_type as TransactionType,
             txn.status as TransactionStatus
@@ -173,11 +176,11 @@ export async function calculateNewTransactionBalance(
     transactionDate: string,
     transactionTime: string,
     amount: number,
-    type: TransactionType,
+    operationType: OperationType,
     status: TransactionStatus
 ): Promise<number> {
     const balanceBefore = await getBalanceBeforePosition(userId, transactionDate, transactionTime);
-    const impact = calculateImpact(amount, type, status);
+    const impact = calculateImpact(amount, operationType, status);
     return balanceBefore + impact;
 }
 

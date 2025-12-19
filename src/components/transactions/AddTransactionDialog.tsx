@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
@@ -13,7 +12,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { addTransaction, TransactionType, getCurrentDateString } from '@/services';
+import {
+    addTransaction,
+    TransactionType,
+    getCurrentDateString,
+    DEBIT_TRANSACTION_TYPES,
+    CREDIT_TRANSACTION_TYPES
+} from '@/services';
 
 interface AddTransactionDialogProps {
     open: boolean;
@@ -25,6 +30,10 @@ interface AddTransactionDialogProps {
 export function AddTransactionDialog({ open, onOpenChange, onTransactionAdded, defaultUserId }: AddTransactionDialogProps) {
     const { register, handleSubmit, reset, setValue, watch, formState: { isSubmitting, isValid } } = useForm({ mode: 'onChange' });
     const transactionType = watch('transaction_type');
+    const operationType = watch('operation_type');
+
+    // Get available types based on operation
+    const availableTypes = operationType === 'credit' ? CREDIT_TRANSACTION_TYPES : DEBIT_TRANSACTION_TYPES;
 
     useEffect(() => {
         if (open && defaultUserId) {
@@ -32,15 +41,24 @@ export function AddTransactionDialog({ open, onOpenChange, onTransactionAdded, d
         }
         if (open) {
             // Set default values for select fields
+            setValue('operation_type', 'debit');
             setValue('transaction_type', 'DEBIT');
         }
     }, [open, defaultUserId, setValue]);
+
+    // When operation changes, reset transaction_type to first valid option
+    useEffect(() => {
+        if (operationType && !availableTypes.includes(transactionType)) {
+            setValue('transaction_type', availableTypes[0]);
+        }
+    }, [operationType, transactionType, availableTypes, setValue]);
 
     const onSubmit = async (data: any) => {
         try {
             const result = await addTransaction({
                 user_id: data.user_id,
                 transaction_date: data.transaction_date || getCurrentDateString(),
+                operation_type: data.operation_type,
                 transaction_type: data.transaction_type as TransactionType,
                 amount: parseFloat(data.amount),
                 narration: data.narration,
@@ -88,24 +106,41 @@ export function AddTransactionDialog({ open, onOpenChange, onTransactionAdded, d
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
+                            <Label>Operation <span className="text-destructive">*</span></Label>
+                            <Select value={watch('operation_type')} onValueChange={(v) => setValue('operation_type', v, { shouldValidate: true })}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Credit/Debit" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="credit">Credit (+)</SelectItem>
+                                    <SelectItem value="debit">Debit (-)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="grid gap-2">
                             <Label>Type <span className="text-destructive">*</span></Label>
                             <Select value={transactionType} onValueChange={(v) => setValue('transaction_type', v, { shouldValidate: true })}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Type" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="DEBIT">Debit</SelectItem>
-                                    <SelectItem value="CREDIT">Credit</SelectItem>
-                                    <SelectItem value="TRANSFER_OUT">Transfer Out</SelectItem>
-                                    <SelectItem value="TRANSFER_IN">Transfer In</SelectItem>
+                                    {availableTypes.map((type) => (
+                                        <SelectItem key={type} value={type}>
+                                            {type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                        </SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
                             <Label>Amount <span className="text-destructive">*</span></Label>
                             <Input type="number" step="0.01" {...register('amount', { required: true })} />
                         </div>
                     </div>
+
 
                     <div className="grid gap-2">
                         <Label>Narration <span className="text-destructive">*</span></Label>
@@ -136,6 +171,6 @@ export function AddTransactionDialog({ open, onOpenChange, onTransactionAdded, d
                     </DialogFooter>
                 </form>
             </DialogContent>
-        </Dialog>
+        </Dialog >
     );
 }

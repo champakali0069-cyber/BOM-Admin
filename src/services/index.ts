@@ -41,6 +41,7 @@ export type {
     Transaction,
     TransactionType,
     TransactionStatus,
+    OperationType,
     AddTransactionInput,
     EditTransactionInput,
     BalanceCalculationResult
@@ -48,17 +49,17 @@ export type {
 
 // Utility exports
 export {
-    isCredit,
-    isDebit,
     shouldImpactBalance,
     calculateImpact,
+    calculateImpactLegacy,
     getDebitCreditValues,
     generateTransactionId,
     getCurrentTimeString,
     getCurrentDateString,
     getUserInitialBalance,
-    CREDIT_TYPES,
-    DEBIT_TYPES,
+    ALL_TRANSACTION_TYPES,
+    DEBIT_TRANSACTION_TYPES,
+    CREDIT_TRANSACTION_TYPES,
     BALANCE_IMPACTING_STATUSES
 } from './transactionTypes';
 

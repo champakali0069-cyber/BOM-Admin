@@ -73,12 +73,12 @@ export async function addTransaction(input: AddTransactionInput): Promise<AddTra
             transactionDate,
             transactionTime,
             input.amount,
-            input.transaction_type,
+            input.operation_type,
             status
         );
 
-        // Get debit/credit column values
-        const { debit, credit } = getDebitCreditValues(input.amount, input.transaction_type);
+        // Get debit/credit column values based on operation_type
+        const { debit, credit } = getDebitCreditValues(input.amount, input.operation_type);
 
         // Insert the transaction
         const { data, error } = await supabase

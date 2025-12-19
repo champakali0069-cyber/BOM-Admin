@@ -29,7 +29,8 @@ import {
     TransactionType,
     TransactionStatus,
     getDebitCreditValues,
-    calculateImpact
+    calculateImpact,
+    calculateImpactLegacy
 } from './transactionTypes';
 import { recalculateAllBalances } from './balanceService';
 
@@ -44,9 +45,18 @@ export interface EditTransactionResult {
  * Determine if the edit requires balance recalculation
  */
 function checkRecalculationNeeded(
-    original: { amount: number; transaction_type: string; status: string },
+    original: { amount: number; transaction_type: string; status: string; debit: number | null; credit: number | null },
     updated: EditTransactionInput
 ): boolean {
+    // Operation type changed? (credit to debit or vice versa)
+    if (updated.operation_type) {
+        const wasCredit = original.credit && original.credit > 0;
+        const isCredit = updated.operation_type === 'credit';
+        if (wasCredit !== isCredit) {
+            return true;
+        }
+    }
+
     // Type changed?
     if (updated.transaction_type && updated.transaction_type !== original.transaction_type) {
         return true;
@@ -70,7 +80,7 @@ function checkRecalculationNeeded(
  * 
  * Process:
  * 1. Fetch original transaction
- * 2. Determine if changes impact balance (type, amount, status)
+ * 2. Determine if changes impact balance (type, amount, status, operation)
  * 3. Update the transaction record
  * 4. If balance-impacting changes, recalculate all balances
  * 5. Return result with new user balance
@@ -97,22 +107,18 @@ export async function editTransaction(
         // Build the update object
         const updateData: any = {};
 
-        if (updates.transaction_type) {
-            updateData.transaction_type = updates.transaction_type;
-            // Update debit/credit columns
+        // Handle operation_type and/or amount changes
+        if (updates.operation_type || updates.amount !== undefined) {
+            const operationType = updates.operation_type || (original.credit && original.credit > 0 ? 'credit' : 'debit');
             const amount = updates.amount ?? original.amount;
-            const { debit, credit } = getDebitCreditValues(amount, updates.transaction_type);
+            const { debit, credit } = getDebitCreditValues(amount, operationType);
             updateData.debit = debit;
             updateData.credit = credit;
+            updateData.amount = amount;
         }
 
-        if (updates.amount !== undefined) {
-            updateData.amount = updates.amount;
-            // Update debit/credit columns
-            const type = (updates.transaction_type || original.transaction_type) as TransactionType;
-            const { debit, credit } = getDebitCreditValues(updates.amount, type);
-            updateData.debit = debit;
-            updateData.credit = credit;
+        if (updates.transaction_type) {
+            updateData.transaction_type = updates.transaction_type;
         }
 
         if (updates.status) {
@@ -185,8 +191,8 @@ export function calculateEditImpact(
     newType: TransactionType,
     newStatus: TransactionStatus
 ): { originalImpact: number; newImpact: number; difference: number } {
-    const originalImpact = calculateImpact(originalAmount, originalType, originalStatus);
-    const newImpact = calculateImpact(newAmount, newType, newStatus);
+    const originalImpact = calculateImpactLegacy(originalAmount, originalType, originalStatus);
+    const newImpact = calculateImpactLegacy(newAmount, newType, newStatus);
 
     return {
         originalImpact,

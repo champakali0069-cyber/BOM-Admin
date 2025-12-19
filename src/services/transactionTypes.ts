@@ -5,19 +5,47 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-// Transaction types that ADD to balance
-export const CREDIT_TYPES = ['CREDIT', 'TRANSFER_IN', 'DEPOSIT', 'CHEQUE_DEPOSIT'] as const;
+// Operation type - determines balance direction
+export type OperationType = 'credit' | 'debit';
 
-// Transaction types that SUBTRACT from balance
-export const DEBIT_TYPES = ['DEBIT', 'TRANSFER_OUT', 'ATM_WITHDRAWAL', 'UTILITY_PAYMENT', 'UPI_TRANSFER', 'CHEQUE_WITHDRAWAL'] as const;
-
-// All valid transaction types from schema
+// All valid transaction types from schema (including new IMPS/NEFT)
 export type TransactionType =
     | 'DEBIT' | 'CREDIT'
     | 'TRANSFER_OUT' | 'TRANSFER_IN'
     | 'ATM_WITHDRAWAL' | 'DEPOSIT'
     | 'UTILITY_PAYMENT' | 'UPI_TRANSFER'
-    | 'CHEQUE_DEPOSIT' | 'CHEQUE_WITHDRAWAL';
+    | 'CHEQUE_DEPOSIT' | 'CHEQUE_WITHDRAWAL'
+    | 'IMPS' | 'NEFT';
+
+// List of all transaction types for UI dropdowns
+export const ALL_TRANSACTION_TYPES: TransactionType[] = [
+    'DEBIT', 'CREDIT',
+    'TRANSFER_OUT', 'TRANSFER_IN',
+    'ATM_WITHDRAWAL', 'DEPOSIT',
+    'UTILITY_PAYMENT', 'UPI_TRANSFER',
+    'CHEQUE_DEPOSIT', 'CHEQUE_WITHDRAWAL',
+    'IMPS', 'NEFT'
+];
+
+// Transaction types for DEBIT operations (-)
+export const DEBIT_TRANSACTION_TYPES: TransactionType[] = [
+    'DEBIT',
+    'TRANSFER_OUT',
+    'ATM_WITHDRAWAL',
+    'UTILITY_PAYMENT',
+    'UPI_TRANSFER',
+    'CHEQUE_WITHDRAWAL',
+    'IMPS',
+    'NEFT'
+];
+
+// Transaction types for CREDIT operations (+)
+export const CREDIT_TRANSACTION_TYPES: TransactionType[] = [
+    'CREDIT',
+    'TRANSFER_IN',
+    'DEPOSIT',
+    'CHEQUE_DEPOSIT'
+];
 
 // Transaction status types
 export type TransactionStatus = 'success' | 'pending' | 'failed' | 'reversed';
@@ -57,7 +85,8 @@ export interface Transaction {
 export interface AddTransactionInput {
     user_id: string;
     transaction_date: string;
-    transaction_type: TransactionType;
+    operation_type: OperationType; // 'credit' or 'debit' - controls balance direction
+    transaction_type: TransactionType; // The category/label (IMPS, NEFT, etc.)
     amount: number;
     narration: string;
     description?: string;
@@ -70,6 +99,7 @@ export interface AddTransactionInput {
 
 // Input for editing a transaction
 export interface EditTransactionInput {
+    operation_type?: OperationType; // 'credit' or 'debit'
     transaction_type?: TransactionType;
     amount?: number;
     narration?: string;
@@ -88,20 +118,6 @@ export interface BalanceCalculationResult {
 }
 
 /**
- * Check if a transaction type is a credit (adds to balance)
- */
-export function isCredit(type: TransactionType): boolean {
-    return (CREDIT_TYPES as readonly string[]).includes(type);
-}
-
-/**
- * Check if a transaction type is a debit (subtracts from balance)
- */
-export function isDebit(type: TransactionType): boolean {
-    return (DEBIT_TYPES as readonly string[]).includes(type);
-}
-
-/**
  * Check if a transaction status should impact balance
  */
 export function shouldImpactBalance(status: TransactionStatus): boolean {
@@ -109,29 +125,44 @@ export function shouldImpactBalance(status: TransactionStatus): boolean {
 }
 
 /**
- * Calculate the balance impact of a transaction
+ * Calculate the balance impact based on operation_type
  * Returns positive for credit, negative for debit, or 0 if status doesn't impact
  */
-export function calculateImpact(amount: number, type: TransactionType, status: TransactionStatus): number {
+export function calculateImpact(amount: number, operationType: OperationType, status: TransactionStatus): number {
     // Only successful transactions impact balance
     if (!shouldImpactBalance(status)) {
         return 0;
     }
 
-    if (isCredit(type)) {
-        return amount;
-    } else if (isDebit(type)) {
-        return -amount;
+    return operationType === 'credit' ? amount : -amount;
+}
+
+/**
+ * Calculate impact from old transaction data (for backwards compatibility)
+ */
+export function calculateImpactLegacy(amount: number, type: TransactionType, status: TransactionStatus): number {
+    if (!shouldImpactBalance(status)) {
+        return 0;
     }
 
+    // Legacy credit types
+    const creditTypes = ['CREDIT', 'TRANSFER_IN', 'DEPOSIT', 'CHEQUE_DEPOSIT'];
+    // Legacy debit types  
+    const debitTypes = ['DEBIT', 'TRANSFER_OUT', 'ATM_WITHDRAWAL', 'UTILITY_PAYMENT', 'UPI_TRANSFER', 'CHEQUE_WITHDRAWAL', 'IMPS', 'NEFT'];
+
+    if (creditTypes.includes(type)) {
+        return amount;
+    } else if (debitTypes.includes(type)) {
+        return -amount;
+    }
     return 0;
 }
 
 /**
- * Get debit and credit column values based on transaction type
+ * Get debit and credit column values based on operation_type
  */
-export function getDebitCreditValues(amount: number, type: TransactionType): { debit: number | null; credit: number | null } {
-    if (isCredit(type)) {
+export function getDebitCreditValues(amount: number, operationType: OperationType): { debit: number | null; credit: number | null } {
+    if (operationType === 'credit') {
         return { debit: null, credit: amount };
     } else {
         return { debit: amount, credit: null };
